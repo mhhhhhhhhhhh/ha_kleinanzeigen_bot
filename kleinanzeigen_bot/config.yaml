@@ -1,6 +1,6 @@
 name: Kleinanzeigen Bot mit Web-GUI
 version: "0.1.0"
-slug: kleinanzeigen_bot
+slug: ha_kleinanzeigen_bot
 description: Kleinanzeigen-Bot mit Anzeigeneditor, Aufträgen und Browserdesktop
 arch:
   - amd64
