@@ -1,0 +1,10 @@
+configuration:
+  job_timeout_minutes:
+    name: Zeitlimit pro Bot-Auftrag
+    description: Auftrag nach dieser Anzahl Minuten stoppen (1 bis 240).
+  desktop_width:
+    name: Desktop-Breite
+    description: Breite des Browserdesktops in Pixeln. Neustart erforderlich.
+  desktop_height:
+    name: Desktop-Höhe
+    description: Höhe des Browserdesktops in Pixeln. Neustart erforderlich.

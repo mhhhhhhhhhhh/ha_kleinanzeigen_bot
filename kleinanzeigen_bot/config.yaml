@@ -1,0 +1,25 @@
+name: Kleinanzeigen Bot mit Web-GUI
+version: "0.1.0"
+slug: kleinanzeigen_bot
+description: Kleinanzeigen-Bot mit Anzeigeneditor, Aufträgen und Browserdesktop
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+stage: experimental
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:storefront-outline
+panel_title: Kleinanzeigen Bot
+panel_admin: true
+timeout: 30
+options:
+  job_timeout_minutes: 30
+  desktop_width: 1440
+  desktop_height: 900
+schema:
+  job_timeout_minutes: int(1,240)
+  desktop_width: int(800,2560)
+  desktop_height: int(600,1600)
