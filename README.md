@@ -1,53 +1,58 @@
-# Kleinanzeigen Bot – Home-Assistant-Add-on 0.2.0
+# Hotfix 0.2.4 für die bestehende 0.2.x-Anzeigenverwaltung
 
-Überarbeitete Add-on-Version mit Online-Anzeigenübersicht, Formular- und YAML/JSON-Editor,
-Bildverwaltung und dauerhaft gespeicherter Automatik. Kein Push in das ursprüngliche Repository
-wurde aus dieser Arbeitsumgebung vorgenommen. Dieses Verzeichnis ist zum Einspielen in das
-bestehende Repository bzw. als lokales Add-on bestimmt.
+Dieses Paket ist ein gezielter Patch, kein vollständiges Add-on und kein Docker-Image.
+Es braucht die zuvor bereitgestellte 0.2.x-Serverversion mit `engine = Engine(...)`.
 
-## Enthalten
+## Anwenden
 
-- Startansicht mit Online-Anzeigen aus der vollständigen `list`-Ausgabe des Original-Bots.
-- Automatischer Erstimport fehlender Anzeigen samt Bildern nach Kontoeinrichtung.
-- Suche, Statusfilter, Bildvorschau, Anzeigen-ID und Ablaufdatum.
-- Formular für Titel, Beschreibung, Kategorie und Preis; erweiterter YAML/JSON-Editor für alle Felder.
-- Unbekannte Anzeigenfelder bleiben beim Formularspeichern erhalten.
-- Bild-Upload, Zuordnung, Reihenfolge und Entfernen von Bildzuordnungen. WEBP-Uploads werden zu JPG.
-- Einzelaktionen: prüfen, aktualisieren, veröffentlichen/neu einstellen, verlängern, reservieren,
-  aktivieren und online löschen.
-- Explizites „Von online neu laden“ mit vorheriger Sicherung und Download in einen Zwischenordner.
-- Regelmäßiger Online-Abgleich und opt-in Verlängerung vor Ablauf.
-- Pro Anzeige opt-in Neuanlegen nach X vollständigen 24-Stunden-Tagen.
-- Sperre gegen unbestätigte Wiederholungen nach unklarer Veröffentlichung oder Neustart.
-- Ingress, noVNC-Browserdesktop, echte PTY-Eingabe, Live-Logs, Stoppen und Zeitlimit.
-- Quellinstallation des Original-Bots einschließlich seines nodriver-Patches; keine ARM-Binärdatei-Verwechslung.
+Add-on stoppen. ZIP außerhalb des Add-on-Ordners entpacken. Auf dem System, auf dem
+sich die Add-on-Quelldateien befinden, ausführen:
 
-## Installation / Upgrade
+```bash
+python3 apply_hotfix.py /addons/kleinanzeigen_bot
+```
 
-Die Anleitung für bestehende Installationen und die Ersteinrichtung steht in
-[kleinanzeigen_bot/DOCS.md](kleinanzeigen_bot/DOCS.md).
+Den Pfad bei Bedarf anpassen. Im angegebenen Ordner müssen Dockerfile, config.yaml,
+app/server.py und app/engine.py liegen. Der Installer sichert die betroffenen Dateien
+in einen benachbarten Ordner und ändert keine /data-Dateien oder Browsersitzungen.
+Er prüft vor Änderungen die Serverstruktur. Wenn dort noch der alte 0.1.x-Server mit
+`current = None` statt `engine = Engine(...)` liegt, bricht er ab: Dann müssen erst die
+zusammengehörigen Dateien der 0.2.x-Version übernommen werden.
 
-Als lokales Add-on muss der **Inhalt von `kleinanzeigen_bot/`** nach
-`/addons/kleinanzeigen_bot/`. Direkt dort liegen dann `config.yaml`, `Dockerfile`,
-`boot.py`, `bot-entry.sh`, `nginx.conf` und `app/`.
+Danach lokale Add-on-Quellen neu laden, Image neu bauen/aktualisieren und Add-on starten.
+Nur ein Neustart reicht nicht, da Python-Dateien beim Build ins Image kopiert werden.
+Die Oberfläche neu laden und Online synchronisieren.
 
-Bei einem Upgrade bestehende Add-on-Daten sichern und das Add-on stoppen. Die vorhandene
-Installation mit gleichem `slug: ha_kleinanzeigen_bot` aktualisieren/neu bauen;
-nicht deinstallieren oder `/data` löschen. Bestehende Konfiguration, Anzeigen und
-Browserprofil werden nicht absichtlich zurückgesetzt.
+## Änderungen
 
-## Prüfstatus
+- Automatische Anmeldung für list/download wird auf 120 Sekunden begrenzt. Bei Timeout
+  bleibt die Browserseite mit ihrer eventuell offenen Gerätebestätigung erhalten.
+  Im Browserdesktop anmelden/bestätigen und ENTER senden. Die Sitzung wird danach durch
+  die Login-Erkennung des Original-Bots überprüft; ein Login wird niemals nur angenommen.
+- list liefert strukturierte JSON-Daten aus dem Renderer des installierten Original-Bots.
+  Seine echte Kontoabfrage und strikte Pagination werden nicht ersetzt.
+- Online-Snapshot wird vor Detail-/Bilddownloads gespeichert. Die Startseite fragt den
+  Anzeigenstand auch während laufender Jobs neu ab. Somit müssen nicht sämtliche Bilder
+  geladen sein, bevor die Anzeigen sichtbar werden.
+- Fehlgeschlagene Detailimporte entfernen keinen bereits geladenen Online-Snapshot.
+- Runtime-Konfiguration verwendet einen sichtbaren persistenten Browser, setzt
+  suppress_unsupported_flag_warning auf false und fixiert die Fenstergröße.
+  Der vorhandene Browserprofilpfad und die Benutzerkonfiguration werden beibehalten.
+- Alte Fehlermeldungen werden beim Start eines Login-/Sync-Auftrags zurückgesetzt.
+- Dockerfile, Add-on-Manifest und sichtbare UI-Versionsanzeige werden auf 0.2.4 gesetzt.
 
-Die tatsächlich ausgeführten zehn Prüfdurchläufe stehen in [TEST_REPORT.md](TEST_REPORT.md).
-Die Prüfungen verwenden eine lokale Offline-CLI als Ersatz für den Original-Bot.
-Die Oberfläche wird zusätzlich in echtem headless Chromium getestet.
+## Grenzen
 
-**Nicht lokal durchgeführt:** Docker-Build, Supervisor-Installation, echte Home-Assistant-
-Ingress-/noVNC-Verbindung und echte Kleinanzeigen-Aktionen mit einem Konto.
-Daher bleibt das Manifest auf `stage: experimental`.
+12 lokale Tests zu Datenauswertung, manueller Login-Verifikation, Snapshot bei Detailfehlern,
+UI-Aktualisierung und Installation wurden ausgeführt. Der Original-Bot wurde dabei nicht
+gegen ein echtes Konto getestet. Der Patch löst keine IP-Sperre und umgeht keine Geräte-
+oder CAPTCHA-Bestätigung. Bleibt bereits der Browserstart hängen, kann auch dieser Patch
+keine Anzeigenliste bereitstellen.
 
-## Basis und Lizenz
+Die Brücke verwendet interne Python-Funktionen des installierten Original-Bots. Wenn dessen
+API geändert wurde oder das Image nur eine eingefrorene Bot-Binärdatei statt /opt/venv enthält,
+muss ein kompatibles Source-Image gebaut werden. Für deine gepostete Python-/Source-Konfiguration
+ist diese Brücke vorgesehen.
 
-- Zielrepository: [mhhhhhhhhhhh/ha_kleinanzeigen_bot](https://github.com/mhhhhhhhhhhh/ha_kleinanzeigen_bot)
-- Original-Bot: [Second-Hand-Friends/kleinanzeigen-bot](https://github.com/Second-Hand-Friends/kleinanzeigen-bot)
-- Wrapper-Quellcode: AGPL-3.0-or-later. Siehe [LICENSE-NOTICE.md](LICENSE-NOTICE.md).
+Tests lokal: Python mit Flask und PyYAML, danach `python3 test_hotfix.py`.
+Die GitHub-Dateien wurden nicht direkt verändert.
