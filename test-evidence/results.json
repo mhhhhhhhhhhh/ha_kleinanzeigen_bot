@@ -1,0 +1,62 @@
+[
+  {
+    "round": 1,
+    "description": "API, Online-Import, Dateisicherheit, Bildzuordnung und echte PTY-Prozesse mit Offline-CLI",
+    "returncode": 1,
+    "seconds": 7.27
+  },
+  {
+    "round": 2,
+    "description": "Template-Pfad korrigiert; Scheduler, Intervallgrenzen, Neustart und Veröffentlichungssperren ergänzt",
+    "returncode": 0,
+    "seconds": 9.81
+  },
+  {
+    "round": 3,
+    "description": "Manuelle Veröffentlichung abgesichert; JavaScript-Syntax und echte Chromium-UI-Tests ergänzt",
+    "returncode": 0,
+    "seconds": 27.11
+  },
+  {
+    "round": 4,
+    "description": "Verlängerung als ein Browserauftrag; Ablaufgrenzen, manuelle Unsicherheitsfälle und Neustart-Backoff",
+    "returncode": 0,
+    "seconds": 27.51
+  },
+  {
+    "round": 5,
+    "description": "Expliziter Online-Neuimport, Fehler ohne Datenverlust, Projekt-/Ingress-/Docker-Verträge und UI-ID-Prüfung",
+    "returncode": 1,
+    "seconds": 27.96
+  },
+  {
+    "round": 6,
+    "description": "Download-Konfiguration im CLI-Test korrigiert; echte Bilddaten, Prozessgruppen und Token-Isolation geprüft",
+    "returncode": 0,
+    "seconds": 28.01
+  },
+  {
+    "round": 7,
+    "description": "Native YAML-Zeitstempel, beschädigter Zustand, Umgebungs-Konto, Dokumentation und CI-Builddefinition",
+    "returncode": 0,
+    "seconds": 29.63
+  },
+  {
+    "round": 8,
+    "description": "Zusätzliche Randfälle: Pfad-Aliase, CRLF-Dateien, API-Typen und veralteter Online-Stand vor fälliger Automatik",
+    "returncode": 0,
+    "seconds": 29.49
+  },
+  {
+    "round": 9,
+    "description": "Stabilitätswiederholung der vollständigen 115 Tests mit verändertem Python-Hashseed",
+    "returncode": 0,
+    "seconds": 28.88
+  },
+  {
+    "round": 10,
+    "description": "Finaler vollständiger Regressionstest: API, Automatik, echte Chromium-UI und Projektprüfungen",
+    "returncode": 0,
+    "seconds": 29.4
+  }
+]

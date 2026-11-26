@@ -1,76 +1,88 @@
-# Prüfbericht – Version 0.1.0
+# Tatsächlicher Prüfbericht – Version 0.2.0
 
-## Tatsächlich ausgeführt
+Stand: 26. November 2026. Zehn lokale Prüfdurchläufe wurden tatsächlich ausgeführt.
+Die Testsuite wurde während der Bearbeitung um weitere Fehlerfälle erweitert.
+Die letzten drei vollständigen Durchläufe bestanden jeweils **115 Tests**, ohne übersprungene Tests.
 
-- 23 automatisierte API-/Prozesssteuerungs-Tests, alle bestanden.
-- Python-Syntaxprüfung für Backend, Boot-Supervisor und Testprogramme.
-- YAML-Syntaxprüfung und Abgleich von Add-on-Optionen mit ihrem Schema.
-- Statische Prüfung von Ingress-Port, Supervisor-ACL und WebSocket-Direktiven.
-- Syntaxprüfung der Shell-Fragmente beider Docker-RUN-Anweisungen mit `bash -n`.
-- Rendering der Jinja-Weboberfläche über den Flask-Testclient.
+## Ergebnisse
 
-Die API-Tests prüfen unter anderem Datei-CRUD, Bild-Upload, Syntaxfehler,
-CSRF, Path-Traversal, Symlinks, Befehlsbegrenzung, Bestätigungspflicht,
-Passwortfilterung inklusive geteilten PTY-Ausgaben, Login/ENTER,
-parallele Auftragssperre, Stoppen, Zeitlimit und gespeicherte Protokolle.
-Der simulierte Bot spricht keine externen Systeme an.
+| Durchlauf | Bestanden | Fehlgeschlagen | Schwerpunkt |
+| --- | ---: | ---: | --- |
+| 1 | 57 | 1 | API, Online-Import, Dateisicherheit, Bildzuordnung und echte PTY-Prozesse mit Offline-CLI |
+| 2 | 82 | 0 | Template-Pfad korrigiert; Scheduler, Intervallgrenzen, Neustart und Veröffentlichungssperren ergänzt |
+| 3 | 86 | 0 | Manuelle Veröffentlichung abgesichert; JavaScript-Syntax und echte Chromium-UI-Tests ergänzt |
+| 4 | 90 | 0 | Verlängerung als ein Browserauftrag; Ablaufgrenzen, manuelle Unsicherheitsfälle und Neustart-Backoff |
+| 5 | 98 | 1 | Expliziter Online-Neuimport, Fehler ohne Datenverlust, Projekt-/Ingress-/Docker-Verträge und UI-ID-Prüfung |
+| 6 | 102 | 0 | Download-Konfiguration im CLI-Test korrigiert; echte Bilddaten, Prozessgruppen und Token-Isolation geprüft |
+| 7 | 106 | 0 | Native YAML-Zeitstempel, beschädigter Zustand, Umgebungs-Konto, Dokumentation und CI-Builddefinition |
+| 8 | 115 | 0 | Zusätzliche Randfälle: Pfad-Aliase, CRLF-Dateien, API-Typen und veralteter Online-Stand vor fälliger Automatik |
+| 9 | 115 | 0 | Stabilitätswiederholung der vollständigen 115 Tests mit verändertem Python-Hashseed |
+| 10 | 115 | 0 | Finaler vollständiger Regressionstest: API, Automatik, echte Chromium-UI und Projektprüfungen |
 
-## Nicht ausgeführt
+### Gefundene und korrigierte Fehler
 
-- Docker-Image-Build / echte Bot-Binärdatei aus GitHub.
-- `nginx -t` mit den installierten Debian-Paketen.
-- JavaScript-Engine-/Browsertest (kein Node/Browser in der Testumgebung).
-- Home-Assistant-Supervisor-Installation und Ingress-Sitzung.
-- noVNC-WebSocket-Verbindung und Chromium-Start.
-- Kleinanzeigen-Anmeldung, CAPTCHA oder tatsächliche Online-Aktionen.
+- Durchlauf 1: Flask fand beim dynamischen Testimport die Vorlage nicht. Der Templateordner
+  wird jetzt ausdrücklich relativ zur Serverdatei bestimmt.
+- Durchlauf 5: Der Offline-CLI-Ersatz ignorierte `download.dir`. Der Testersatz wurde korrigiert;
+  anschließend bestand der Test für Download in einen Zwischenordner mit Erhalt der Originaldatei.
+- Zusätzlich bei Review/Regression abgesichert: native YAML-Zeitstempel im JSON-Formular,
+  CRLF-Konfigurationsrevisionen, eindeutige Dateipfade, API-Eingabetypen, Intervallgrenzen,
+  dauerhafte Veröffentlichungssperren sowie aktuelle Online-Abfragen für fällige Zeitpläne.
 
-Das Paket ist deshalb als **experimentell** markiert. Die bestandenen
-Offline-Tests sind kein Nachweis einer erfolgreichen Zielsystem-Installation.
+Die Rohprotokolle liegen unter `test-evidence/round-01.log` bis `round-10.log`.
+`tested-source.json` enthält SHA-256-Fingerabdrücke der geprüften Programmdateien.
 
-## Testausgabe
+## Tatsächlich geprüft
 
-```text
-test_ad_crud (__main__.ApiTests.test_ad_crud) ... ok
-test_command_injection (__main__.ApiTests.test_command_injection) ... ok
-test_confirmation_required (__main__.ApiTests.test_confirmation_required) ... ok
-test_credentials_private (__main__.ApiTests.test_credentials_private) ... ok
-test_csrf (__main__.ApiTests.test_csrf) ... ok
-test_file_listing (__main__.ApiTests.test_file_listing) ... ok
-test_finished_job_persisted (__main__.ApiTests.test_finished_job_persisted) ... ok
-test_homepage (__main__.ApiTests.test_homepage) ... ok
-test_job_failure (__main__.ApiTests.test_job_failure) ... ok
-test_job_success_and_log (__main__.ApiTests.test_job_success_and_log) ... ok
-test_json_file_invalid (__main__.ApiTests.test_json_file_invalid) ... ok
-test_json_object_required (__main__.ApiTests.test_json_object_required) ... ok
-test_login_pty_lock_and_enter (__main__.ApiTests.test_login_pty_lock_and_enter) ... ok
-test_password_preserved (__main__.ApiTests.test_password_preserved) ... ok
-test_path_traversal (__main__.ApiTests.test_path_traversal) ... ok
-test_png_upload (__main__.ApiTests.test_png_upload) ... ok
-test_publish_arguments (__main__.ApiTests.test_publish_arguments) ... ok
-test_split_secret_redacted (__main__.ApiTests.test_split_secret_redacted) ... ok
-test_stop (__main__.ApiTests.test_stop) ... ok
-test_symlink (__main__.ApiTests.test_symlink) ... ok
-test_timeout (__main__.ApiTests.test_timeout) ... ok
-test_upload_invalid (__main__.ApiTests.test_upload_invalid) ... ok
-test_yaml_invalid (__main__.ApiTests.test_yaml_invalid) ... ok
+- Python-Syntax aller Projektdateien und JavaScript-Syntax über den verfügbaren Node-Prozess.
+- HTTP-API: JSON-/CSRF-Prüfung, Dateipfade, Symlinks, Revisionskonflikte und private Zugangsdaten.
+- Vollständiger Import einer Offline-Testliste mit 37 Anzeigen in mehreren Downloadbatches.
+- Gemeinsame Darstellung von Online-Snapshot und lokalen Arbeitsdateien.
+- Beibehaltung lokaler Änderungen beim normalen Abgleich; expliziter Online-Neuimport über Staging.
+- Daten-, Bild- und Sonderattributerhalt beim Bearbeiten/Wiederveröffentlichen.
+- Decode-Prüfung von Uploads und WEBP-zu-JPG-Konvertierung im tatsächlich vorhandenen Pillow.
+- Echte Linux-PTYs und echte Unterprozesse: Login-ENTER, Sperre paralleler Jobs, Stoppen,
+  Prozessgruppen inklusive Nachkommen, Zeitlimit und geschwärzte Protokolle.
+- Scheduler: opt-in, vollständige Tagesintervalle, neue ID, fehlende/reservierte Anzeigen,
+  gebündelte Verlängerung, Neustart, Backoff und kein blindes Wiederholen unklarer Veröffentlichungen.
+- Vier echte headless-Chromium-Tests gegen einen lokalen Flask-Server: initiale Anzeigen,
+  Formularbearbeitung, Zeitplan trotz ungespeicherter Formularänderung, mobile Ansicht,
+  neue lokale Anzeige und Bild-Upload. Es wurden keine JavaScript-Seitenfehler festgestellt.
+- Home-Assistant-Manifest und Proxy-/Dockerfile-Verträge als statische Prüfungen.
 
-----------------------------------------------------------------------
-Ran 23 tests in 1.203s
+## Grenzen der Prüfung
 
-OK
-```
+Der Original-Bot wurde aus seinen verfügbaren Repository-Dateien und dokumentierten CLI-Verträgen
+analysiert, aber in dieser Arbeitsumgebung nicht installiert oder gegen ein echtes Konto gestartet.
+Bot-Aufrufe in Tests verwenden ausschließlich `tests/fake_bot.py`. Dessen Ausgaben und Verhalten
+bilden die erwartete Schnittstelle ab; das ist kein Nachweis der aktuellen Kleinanzeigen-Website.
 
-## Offline-Validierung
+Die verfügbaren Browser wurden tatsächlich verwendet. Dagegen stand hier kein Docker- bzw.
+Home-Assistant-Supervisor-System zur Verfügung. **Nicht durchgeführt:**
 
-```text
-Python syntax OK: kleinanzeigen_bot/boot.py
-Python syntax OK: tests/test_api.py
-Python syntax OK: tests/validate_project.py
-Python syntax OK: kleinanzeigen_bot/app/server.py
-YAML syntax OK: kleinanzeigen_bot/config.yaml
-YAML syntax OK: kleinanzeigen_bot/translations/de.yaml
-Ingress manifest, ACL and WebSocket directives: OK (static only)
-UI template and relative API paths: OK (static only)
-SKIPPED: JavaScript engine not installed; UI browser execution remains untested.
-Not run: Docker build, nginx -t, Home Assistant Supervisor, real Chromium/noVNC or Kleinanzeigen.
-```
+- Docker-Build auf amd64 und aarch64 samt Installation der realen Upstream-Abhängigkeiten.
+- Startprüfung von nginx, Xvfb, Chromium und noVNC innerhalb des gebauten Add-on-Containers.
+- Anmeldung, CAPTCHA/Gerätebestätigung und Online-Aktionen im eigenen Kleinanzeigen-Konto.
+- Echte Home-Assistant-Ingress-/WebSocket-Verbindung.
+- End-to-End-Prüfung des echten Original-Bots: mehrseitige Liste, Bilddownload, Update,
+  Verlängerung, Reservierung, Löschung und Wiederveröffentlichung.
+
+Die fehlenden Integrationsprüfungen sind auch im Manifest durch `stage: experimental` berücksichtigt.
+Die neue GitHub-Actions-Datei definiert Tests und Docker-Builds für beide Architekturen,
+**wurde hier jedoch weder gepusht noch auf GitHub ausgeführt**.
+
+`wcmatch` war in der lokalen Python-Testumgebung nicht installiert. Die Offline-Tests nutzten
+für Bildglobs die mitgelieferte Standardglob-/Brace-Alternative. Im Docker-Build wird das vom
+Original-Bot benötigte `wcmatch` installiert; der Produktionspfad nutzt dessen Glob-Engine.
+
+## Nach dem Einspielen auf dem Zielsystem
+
+1. Image bauen und Add-on-Protokoll auf erfolgreichen Start prüfen.
+2. Browserdesktop über Ingress öffnen, manuell anmelden und ENTER senden.
+3. Online synchronisieren; Anzahl und fehlende Detaildownloads mit dem Konto vergleichen.
+4. An einer einzelnen geeigneten Anzeige Prüfung und Update ausführen.
+5. Verlängerung einer Anzeige im Verlängerungsfenster bestätigen.
+6. Nach Freigabe eine einzelne Wiederveröffentlichung prüfen: neue ID, vollständige Bilder/Daten,
+   alte Anzeige erst nach Bestätigung entfernt, aktualisierte Arbeitsdatei und weiterlaufender Zeitplan.
+
+Erst diese Zielsystemprüfungen können den realen Betrieb bestätigen.

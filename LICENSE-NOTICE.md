@@ -1,21 +1,16 @@
-# Lizenzhinweis
+# Lizenzhinweise
 
-Der neu erstellte Add-on-Quellcode in diesem Paket wird unter der Lizenz
-**GNU Affero General Public License, Version 3 oder später (AGPL-3.0-or-later)**
-zur Nutzung, Änderung und Weitergabe bereitgestellt. Die SPDX-Kennung in den
-Quelldateien gilt auch für die Konfigurations-, HTML- und Dokumentationsdateien.
+Der hier bereitgestellte Wrapper-Quellcode steht unter **GNU Affero General Public License,
+Version 3 oder später (AGPL-3.0-or-later)**. Die SPDX-Hinweise in den Quelldateien gelten für
+diese Dateien. Dieser Hinweis ist kein Ersatz für den vollständigen Lizenztext.
 
-Der eigentliche kleinanzeigen-bot wird erst beim Docker-Build aus dem
-Upstream-Projekt bezogen. Er ist kein Bestandteil dieses ZIP-Archivs.
-Upstream-Lizenz und Copyright-Hinweise bleiben maßgeblich. Die vom Build
-bezogene Version wird im Container in `/opt-bot-version.txt` dokumentiert.
+Der vollständige Lizenztext ist bei [GNU](https://www.gnu.org/licenses/agpl-3.0.html) verfügbar.
+Vor Weiterverteilung den vollständigen AGPL-Lizenztext als `LICENSE` beifügen und vorhandene
+Lizenz-/Urheberhinweise des Zielrepositories behalten.
 
-Bei Veröffentlichung dieses Add-ons oder abgeleiteter Fassungen müssen die
-jeweiligen Lizenzpflichten erfüllt und der korrespondierende Quellcode
-bereitgestellt werden. Dieses Paket enthält den vollständigen neuen Wrapper-
-Quellcode; Chromium, Debian, noVNC und weitere Systempakete behalten ihre
-eigenen Lizenzen und Copyright-Hinweise.
+Der Original-Bot von Second-Hand-Friends und seine Bibliotheken werden beim Docker-Build
+separat aus ihren Quellen bezogen. Sie sind im Downloadpaket nicht als nachgebildete oder
+vorab gebaute Binärdateien enthalten. Das Image enthält das Original-Checkout unter `/opt/upstream`
+mit dessen eigenen Lizenz- und Urheberhinweisen. Für Drittkomponenten gelten ihre jeweiligen Lizenzen.
 
-Dieses Add-on ist eine eigenständige, neu erstellte Integration und kein
-veröffentlichtes oder offiziell unterstütztes Produkt des Upstream-Projekts
-oder von Home Assistant.
+Dieses Paket beansprucht weder Urheberschaft am Original-Bot noch eine Partnerschaft mit Kleinanzeigen.

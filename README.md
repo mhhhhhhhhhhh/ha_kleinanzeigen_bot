@@ -1,59 +1,53 @@
-# Kleinanzeigen Bot – Home-Assistant-Add-on
+# Kleinanzeigen Bot – Home-Assistant-Add-on 0.2.0
 
-**Downloadpaket mit vollständigem Quellcode, Weboberfläche und lokaler
-Add-on-Struktur. Experimentelle Erstfassung 0.1.0.**
-
-## Schnellinstallation
-
-1. Den Ordner `kleinanzeigen_bot` nach `/addons/kleinanzeigen_bot` auf dem
-   Home-Assistant-System kopieren.
-2. Im App-/Add-on-Store lokale Quellen neu laden.
-3. Add-on installieren, starten und Weboberfläche öffnen.
-4. Unter Konto Zugangsdaten speichern, manuell anmelden und Konfiguration prüfen.
-
-Nicht den gesamten ZIP-Oberordner nach `/addons/` kopieren. Direkt in
-`/addons/kleinanzeigen_bot/` müssen `config.yaml`, `Dockerfile` und `app/` liegen.
-
-Die vollständige Anleitung steht in `kleinanzeigen_bot/DOCS.md`.
-Dieses ZIP ist kein bereits gehostetes GitHub-Add-on-Repository.
+Überarbeitete Add-on-Version mit Online-Anzeigenübersicht, Formular- und YAML/JSON-Editor,
+Bildverwaltung und dauerhaft gespeicherter Automatik. Kein Push in das ursprüngliche Repository
+wurde aus dieser Arbeitsumgebung vorgenommen. Dieses Verzeichnis ist zum Einspielen in das
+bestehende Repository bzw. als lokales Add-on bestimmt.
 
 ## Enthalten
 
-- Ingress-GUI ohne separate Host-Ports.
-- YAML/JSON-Anzeigeneditor, Bild-Upload und lokale Dateisicherungen.
-- GUI-Verwaltung der Zugangsdaten und Original-Bot-Konfiguration.
-- Einzeln ausführbare Bot-Aufträge mit Live-Logs, Stoppen, Zeitlimit und Verlauf.
-- Chromium-Desktop via noVNC mit PTY/ENTER für manuelle Anmeldung.
-- Dockerfile für amd64/aarch64 sowie Offline-API-Tests.
+- Startansicht mit Online-Anzeigen aus der vollständigen `list`-Ausgabe des Original-Bots.
+- Automatischer Erstimport fehlender Anzeigen samt Bildern nach Kontoeinrichtung.
+- Suche, Statusfilter, Bildvorschau, Anzeigen-ID und Ablaufdatum.
+- Formular für Titel, Beschreibung, Kategorie und Preis; erweiterter YAML/JSON-Editor für alle Felder.
+- Unbekannte Anzeigenfelder bleiben beim Formularspeichern erhalten.
+- Bild-Upload, Zuordnung, Reihenfolge und Entfernen von Bildzuordnungen. WEBP-Uploads werden zu JPG.
+- Einzelaktionen: prüfen, aktualisieren, veröffentlichen/neu einstellen, verlängern, reservieren,
+  aktivieren und online löschen.
+- Explizites „Von online neu laden“ mit vorheriger Sicherung und Download in einen Zwischenordner.
+- Regelmäßiger Online-Abgleich und opt-in Verlängerung vor Ablauf.
+- Pro Anzeige opt-in Neuanlegen nach X vollständigen 24-Stunden-Tagen.
+- Sperre gegen unbestätigte Wiederholungen nach unklarer Veröffentlichung oder Neustart.
+- Ingress, noVNC-Browserdesktop, echte PTY-Eingabe, Live-Logs, Stoppen und Zeitlimit.
+- Quellinstallation des Original-Bots einschließlich seines nodriver-Patches; keine ARM-Binärdatei-Verwechslung.
+
+## Installation / Upgrade
+
+Die Anleitung für bestehende Installationen und die Ersteinrichtung steht in
+[kleinanzeigen_bot/DOCS.md](kleinanzeigen_bot/DOCS.md).
+
+Als lokales Add-on muss der **Inhalt von `kleinanzeigen_bot/`** nach
+`/addons/kleinanzeigen_bot/`. Direkt dort liegen dann `config.yaml`, `Dockerfile`,
+`boot.py`, `bot-entry.sh`, `nginx.conf` und `app/`.
+
+Bei einem Upgrade bestehende Add-on-Daten sichern und das Add-on stoppen. Die vorhandene
+Installation mit gleichem `slug: ha_kleinanzeigen_bot` aktualisieren/neu bauen;
+nicht deinstallieren oder `/data` löschen. Bestehende Konfiguration, Anzeigen und
+Browserprofil werden nicht absichtlich zurückgesetzt.
 
 ## Prüfstatus
 
-Web-API und Jobsteuerung werden mit einem simulierten Bot geprüft. Kein
-Kleinanzeigen-Konto wird durch die Tests angesprochen. Docker/Chromium,
-Supervisor-Installation, Ingress/WebSocket und reale Bot-Aktionen müssen
-auf dem Zielsystem noch getestet werden. Siehe `TEST_REPORT.md`.
+Die tatsächlich ausgeführten zehn Prüfdurchläufe stehen in [TEST_REPORT.md](TEST_REPORT.md).
+Die Prüfungen verwenden eine lokale Offline-CLI als Ersatz für den Original-Bot.
+Die Oberfläche wird zusätzlich in echtem headless Chromium getestet.
 
-## Aufbau
+**Nicht lokal durchgeführt:** Docker-Build, Supervisor-Installation, echte Home-Assistant-
+Ingress-/noVNC-Verbindung und echte Kleinanzeigen-Aktionen mit einem Konto.
+Daher bleibt das Manifest auf `stage: experimental`.
 
-```text
-kleinanzeigen_bot/
-  config.yaml
-  Dockerfile
-  boot.py
-  nginx.conf
-  app/server.py
-  app/templates/index.html
-  DOCS.md
-  README.md
-  CHANGELOG.md
-  translations/de.yaml
-tests/
-  test_api.py
-  validate_project.py
-LICENSE-NOTICE.md
-TEST_REPORT.md
-```
+## Basis und Lizenz
 
-Original-Bot und Debian-Systempakete werden beim Container-Build aus ihren
-Quellen bezogen; sie sind nicht als Binärdateien im ZIP enthalten.
-Lizenz des neuen Wrapper-Quellcodes: AGPL-3.0-or-later.
+- Zielrepository: [mhhhhhhhhhhh/ha_kleinanzeigen_bot](https://github.com/mhhhhhhhhhhh/ha_kleinanzeigen_bot)
+- Original-Bot: [Second-Hand-Friends/kleinanzeigen-bot](https://github.com/Second-Hand-Friends/kleinanzeigen-bot)
+- Wrapper-Quellcode: AGPL-3.0-or-later. Siehe [LICENSE-NOTICE.md](LICENSE-NOTICE.md).

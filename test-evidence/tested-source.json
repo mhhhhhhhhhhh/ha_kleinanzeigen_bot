@@ -1,0 +1,17 @@
+{
+  "kleinanzeigen_bot/app/engine.py": "305a6eb05032999f5e4ae6b057328af4d24f870919d1dcff2ff0d370fdae91c1",
+  "kleinanzeigen_bot/app/server.py": "6f7e6364d62da280f240846dc98f990fb42ac7a89978a588f430e013e35b54f9",
+  "kleinanzeigen_bot/app/storage.py": "9650f7319d93b79aa532c8ef840dc5fa6d7b80b9e7913b8ef763ede58d232146",
+  "kleinanzeigen_bot/app/templates/index.html": "a94ad35422c0801e8bbe13e17f848f26c808e44335c912e8fb31bc6a8453c6c5",
+  "kleinanzeigen_bot/boot.py": "debc97c76f52f307fae4a518c8eb5f78a7a28de130b8abf12df507a2ee31f0a1",
+  "kleinanzeigen_bot/bot-entry.sh": "52d7090aba33b687d49fa53dabca1e52a71c2cc6cb483998be501dc756c13836",
+  "kleinanzeigen_bot/config.yaml": "95331886151c83fab5553c314f8b830425240d954663f77f09f48a16ff9066eb",
+  "repository.yaml": "b61307faca739b7994a1023b6fa3ba0eba5fbc4861ceb496b0057447bf8207cd",
+  "tests/conftest.py": "f7566efbf8fcd91e847cdd227046827f6e41be37c852fa3cb50af002507b9896",
+  "tests/fake_bot.py": "50e05153f481838b0b1f34e115660bbc0faf383a821bffd1ffb920b1ed52bf0d",
+  "tests/run_ten.py": "bb8a53f41505c715f02688c7fcd58240e07cd1bee9523975aa89d9874a1bc2ef",
+  "tests/test_api.py": "3dfecfae8e8af796b79bd9c22c0ac408940c655799b1c486e56b080983707d5b",
+  "tests/test_browser.py": "5703f8f61121343c5d46c1e723e1fadc19e171d7db1f39ef218140dc9f8e9187",
+  "tests/test_project.py": "ed93d8c56d3e1be42e7ea57c890cc3f3c53b6f575f22c2ec08ad453f4cdc078e",
+  "tests/test_scheduler.py": "f9b4a91ab8d9c195c0f3c445a1a69d75fbdcd9d6d618a8e4f0f511d4df5804aa"
+}

@@ -1,204 +1,172 @@
-# Installation und Bedienung
+# Einrichtung und Betrieb
 
-## Voraussetzungen
+## 1. Upgrade auf 0.2.0
 
-Home Assistant OS mit App-/Add-on-Verwaltung (Supervisor). Die Add-on-Struktur
-kann auch ein vorhandener Supervisor verwenden. Home Assistant Container
-oder eine reine Core-Installation kann dieses Paket nicht als Add-on
-installieren. Vorgesehen sind amd64 (x86-64) und aarch64 (64-Bit ARM).
-32-Bit ARM wird nicht unterstützt.
+1. Bestehende Add-on-Daten über Home Assistant sichern.
+2. Add-on stoppen. Nicht deinstallieren; dabei könnten die Daten entfernt werden.
+3. Die Dateien aus `kleinanzeigen_bot/` in den gleichnamigen bestehenden Add-on-Ordner übernehmen.
+   Insbesondere die neue Datei `bot-entry.sh` und beide Module `app/storage.py` / `app/engine.py` mit übernehmen.
+4. Lokale Add-on-Quellen neu laden und aktualisieren bzw. das Image neu erstellen.
+5. Add-on starten und dessen Weboberfläche öffnen.
 
-Als praktische Planungsgröße etwa 2 GB freier RAM für Chromium plus
-Desktop und ausreichend freien Speicher für Image, Anzeigen und Bilder
-vorsehen. Das ist eine Schätzung, keine gemessene Mindestanforderung.
+Der `slug` ist unverändert `ha_kleinanzeigen_bot`, damit die bestehende Add-on-Installation
+und ihr Datenverzeichnis weiterverwendet werden können. Bereits vorhandene `config.yaml`,
+Anzeigen und Browsersitzung werden beim Start behalten. Die neue Auftrags-/Automatikverwaltung
+legt `/data/state/engine.json` an. Der alte 0.1.0-Auftragsverlauf wird nicht in diese neue
+Historie übernommen; er bleibt im Datenverzeichnis verfügbar.
 
-## Als lokales Add-on installieren
+Bei einer frischen Installation nur `kleinanzeigen_bot/` nach `/addons/kleinanzeigen_bot/`
+kopieren. Nicht das gesamte ZIP-Oberverzeichnis als Add-on-Ordner verwenden.
 
-1. ZIP auf einem Rechner entpacken.
-2. Den vollständigen Ordner `kleinanzeigen_bot` in das lokale
-   Home-Assistant-Verzeichnis `/addons/` kopieren. Mit Samba entspricht das
-   üblicherweise `addons/kleinanzeigen_bot`. Nicht unter `/config/addons/`
-   ablegen. Wenn die addons-Freigabe nicht verfügbar ist, über einen geeigneten
-   Datei-/Terminal-Zugang auf das lokale Add-on-Verzeichnis zugreifen.
-3. Im App-/Add-on-Store die Quellen über das Drei-Punkte-Menü neu laden bzw.
-   nach Updates suchen. Das Add-on erscheint unter den lokalen Apps/Add-ons.
-4. **Kleinanzeigen Bot mit Web-GUI** installieren. Der Supervisor baut das
-   Docker-Image auf dem Gerät. Der erste Build benötigt Internetzugang zu den
-   Debian-Paketquellen und GitHub und kann mehrere Minuten dauern.
-5. Add-on starten, Protokoll auf Startfehler prüfen und **Weboberfläche öffnen**
-   auswählen. Optional die Seitenleistenanzeige aktivieren.
+## 2. Konto und erste Anzeigen
 
-Der ZIP-Download ist keine URL, die direkt als Store-Repository eingetragen
-werden kann. Für diese Installationsart zuerst den Ordner lokal kopieren.
+1. Unter **Konto** E-Mail und Passwort speichern.
+2. **Manuell anmelden** starten; im Browserdesktop Anmeldung und Gerätebestätigung abschließen.
+3. Im Browserdesktop **ENTER senden**, damit der Original-Bot den Login prüft.
+4. **Meine Anzeigen → Online synchronisieren** ausführen.
 
-## Ersteinrichtung
+Danach zeigt die Startseite alle Anzeigen des vom Bot vollständig abgerufenen Online-Standes.
+Fehlende lokale Anzeigen werden automatisch mit ihren Bildern importiert. Bereits gespeicherte
+Anzeigen werden bei gewöhnlicher Synchronisierung nicht überschrieben.
 
-1. Unter **Konto** E-Mail/Benutzername und Passwort speichern.
-2. Unter **Konfiguration** die automatisch angelegte `config.yaml` prüfen und
-   bei Bedarf Kontaktdaten, Anzeigen-Defaults und weitere Bot-Optionen ergänzen.
-   Die zwei login-Platzhalter verwenden die in der GUI gespeicherten Daten.
-   Alternativ sind originale Bot-Konfigurationen mit eigenen Login-Werten
-   möglich; dann werden die GUI-Zugangsdaten dort nicht verwendet.
-3. **Manuelle Anmeldung starten**. Im Browserdesktop in Kleinanzeigen anmelden,
-   CAPTCHA/SMS/E-Mail-Verifizierung bei Bedarf selbst durchführen. Danach
-   **ENTER an Bot senden**. Der Bot prüft das konfigurierte Konto und beendet
-   den Login-Auftrag. Das persistente Browserprofil bleibt erhalten.
-4. Zunächst **Online-Anzeigen auflisten** oder **Online-Anzeigen herunterladen**
-   mit Auswahl `new` ausführen. Alternativ eine eigene lokale Anzeige erstellen.
-5. Mit **Konfiguration & Anzeigen prüfen** den Original-Bot prüfen lassen.
-6. Erst danach gewünschte Online-Aktionen ausdrücklich starten.
+Die Oberfläche startet bei aktiviertem Online-Abgleich einen Erstabgleich, wenn ein Konto
+konfiguriert ist und der Stand nicht gerade frisch ist. Der Scheduler läuft unabhängig
+von einem geöffneten Browser alle 30 Sekunden und entscheidet, ob ein Auftrag fällig ist.
+Es läuft immer nur ein Bot-/Browserauftrag.
 
-Die Weboberfläche führt beim Speichern eine YAML/JSON-Syntaxprüfung und einige
-Basisprüfungen durch. Das ist keine vollständige Upstream-Schema- oder
-Kleinanzeigen-Formularprüfung; dafür dient `verify`.
+Falls ein Detaildownload fehlschlägt, bleibt die Online-Anzeige mit einem Hinweis sichtbar.
+Bei fehlgeschlagener Online-Abfrage bleibt der letzte erfolgreiche Stand mit Fehlerhinweis
+sichtbar; eine leere Erfolgsmeldung wird nicht vorgetäuscht.
 
-## Anzeigen und Bilder
+## 3. Bearbeiten
 
-Neue Dateien sind zunächst `active: false`. Zum Veröffentlichen Titel,
-Beschreibung, Kategorie, Preis, Kontaktdaten und Bilder vervollständigen und
-`active: true` setzen. Die Beispielkategorie im Editor ist nur ein Platzhalter.
+**Bearbeiten** öffnet das Formular. Lokales Speichern verändert zunächst nur die Arbeitsdatei.
+**Online aktualisieren** überträgt anschließend die gespeicherten Daten.
 
-Eigene Anzeigen liegen unter `ads/`; heruntergeladene Dateien unter
-`downloaded-ads/`. Die Standard-globs finden YAML/JSON-Dateien in beiden
-Bäumen. Heruntergeladene Online-Drafts mit Dateiendung `.draft` bleiben Entwürfe
-und werden von diesen globs nicht veröffentlicht. Soll daraus eine reguläre
-Anzeige werden, als `.yaml` speichern und prüfen.
+Kategorie, Kontakt, Versandoptionen und Sonderattribute lassen sich im YAML/JSON-Editor vollständig
+bearbeiten. Das Formular erhält Felder, die es selbst nicht anzeigt. Zwischen Formular und
+Rohtexteditor wechseln verwirft Änderungen nur nach Rückfrage.
 
-Hochgeladene Bilder liegen unter `ads/images/` und erhalten eindeutige Namen.
-Die GUI zeigt YAML-Pfade zum Kopieren an. Für Anzeigen direkt unter `ads/`
-passen Pfade wie `images/<name>.jpg`; in anderen Unterordnern absolute
-Containerpfade verwenden, etwa `/data/workspace/ads/images/<name>.jpg`.
-Das Add-on schreibt Bilder nicht automatisch in die Anzeige und löscht sie
-nicht beim Löschen einer Anzeigendatei.
+Bilder werden im Unterordner `images/` direkt neben der gewählten Anzeigen-Datei gespeichert.
+Dadurch stimmen die relativen Pfade auch bei importierten Anzeigen in Unterordnern.
+Uploads werden tatsächlich decodiert und als JPG gespeichert; Dateiendung oder Signatur allein
+reichen nicht. Pfeile ändern die Bild-Reihenfolge; Entfernen entfernt die Zuordnung, nicht die
+Bilddatei. Danach **Lokal speichern**.
 
-## Bot-Aufträge
+Wenn eine Anzeige außerhalb des Add-ons geändert wurde: **Von online neu laden**. Dabei wird
+lokaler Inhalt nach Bestätigung durch einen vollständig heruntergeladenen Online-Stand ersetzt.
+Zuerst entsteht ein Backup einschließlich Bildern. Arbeitsdateipfad, Zeitplan und lokale
+Wiederveröffentlichungs-/Preisreduktionszähler bleiben erhalten.
 
-Verfügbar sind `verify`, `status`, `list`, `download`, `publish`, `update`,
-`extend`, `reserve`, `activate`, `delete`, `login`, `diagnose`, `version` und
-`help`. Die CLI-Aufrufe sind auf diese Befehle und erlaubte Selektoren begrenzt.
-Es gibt keine freie Shell-Eingabe.
+Bot-ID, Zeitstempel und Zähler können im Webeditor nicht verändert werden. Gleichzeitige
+Änderungen werden über eine Dateirevision erkannt; statt stillen Überschreibens erscheint ein
+Konflikt. Während eines Bot-Auftrags sind Speicheraktionen gesperrt.
 
-Die Auswahl akzeptiert je nach Befehl `all`, `due`, `new`, `changed`, `drafts`
-oder kommaseparierte Online-Anzeigen-IDs. Für `publish` sind Kombinationen wie
-`changed,due` möglich. `status` bezieht sich auf lokale Dateien, `list` auf das
-Online-Konto. `extend` verlängert nur geeignete Anzeigen im vom Bot festgelegten
-Zeitfenster.
+## 4. Automatisch verlängern
 
-Bei `publish` ist **Alte Anzeigen behalten** standardmäßig aktiv. Ohne diese
-Option kann der Original-Bot alte Anzeigen beim Neueinstellen entfernen.
-Verändernde Aktionen benötigen die Bestätigung in der Weboberfläche.
-Ein Auftrag wird nie automatisch gestartet oder nach Fehlern wiederholt.
-Die Bot-eigenen Intervalle werden nur ausgewertet, wenn ein Auftrag gestartet
-wird. Ein zusätzlicher Zeitplaner/MQTT- oder HA-Automationsdienst gehört nicht
-zu dieser Version.
+Unter **Automatik** die Option **Aktive Anzeigen automatisch verlängern** einschalten und
+bestätigen. Standardmäßig ist diese Online-Schreibautomatik aus. Standard-Prüfintervall: sechs Stunden.
 
-Während eines Auftrags sind Änderungen an Konfiguration, Zugangsdaten und
-Anzeigendateien sowie weitere Aufträge gesperrt. Bei Login-Prompts mit
-**ENTER an Bot senden** bestätigen. **Stoppen** beendet den Prozess; bereits
-übermittelte Änderungen werden dadurch nicht zurückgenommen.
+Bei Fälligkeit wird der Online-Stand abgerufen, fehlende Anzeigen werden importiert, und geeignete
+aktive Anzeigen innerhalb von acht Tagen vor Ablauf werden in einem Browserauftrag an `extend`
+übergeben. Bei fehlendem Ablaufdatum entscheidet der Original-Bot. Reservierte Anzeigen bleiben
+unberührt. Eine Verlängerung erhält die ID; sie ist kein Neuveröffentlichen.
 
-## Add-on-Optionen
+Eine bereits abgelaufene Anzeige lässt sich nicht zuverlässig wie eine noch aktive Anzeige
+verlängern. Diese Automatik setzt deshalb vor dem Ablauf an.
 
-| Option | Standard | Bedeutung |
-| --- | --- | --- |
-| `job_timeout_minutes` | 30 | Zeitlimit je Auftrag, 1–240 Minuten; danach Abbruch. |
-| `desktop_width` | 1440 | Desktop-Breite, 800–2560 Pixel. |
-| `desktop_height` | 900 | Desktop-Höhe, 600–1600 Pixel. |
+## 5. Nach X Tagen neu anlegen
 
-Nach Änderung der Add-on-Optionen neu starten. Die Optionen befinden sich im
-Home-Assistant-Konfiguration-Tab; Bot-Einstellungen dagegen in der Web-GUI.
+1. Aktive importierte Anzeige öffnen.
+2. **Automatisch neu einstellen** einschalten.
+3. Gewünschte ganze Anzahl von 1 bis 365 Tagen eintragen.
+4. **Zeitplan speichern** und die Wiederveröffentlichung bestätigen.
 
-## Persistente Daten und Sicherungen
+Die erste Frist beginnt mit dem gespeicherten letzten Veröffentlichungszeitpunkt
+(`updated_on`, sonst `created_on`). Fehlt ein brauchbarer Zeitpunkt, beginnt sie bei Aktivierung.
+Bei einer älteren Anzeige kann der erste Neuauftrag daher bereits fällig sein.
+Danach zählt ein volles Intervall ab der zuletzt bestätigten Neuveröffentlichung.
+Eine Verlängerung startet den Neuveröffentlichungszeitplan nicht neu.
 
-Alle Nutzdaten liegen im privaten Add-on-Datenverzeichnis `/data/`:
+Der Zeitplaner nimmt nur ausdrücklich aktivierte Anzeigen. Er übergibt genau die betreffende
+Arbeitsdatei mit ihren Daten und Bildern an `publish`, nicht global `--ads=due` für alle Dateien.
+`publish` erzeugt eine neue ID. Alte Anzeigen werden über `AFTER_PUBLISH` erst nach erfolgreicher
+Veröffentlichung gelöscht; titelbasierte Löschsuche ist für die Einzelaufträge abgeschaltet.
+Die neue ID wird in derselben Arbeitsdatei gespeichert. Die Ordner müssen nicht umbenannt werden.
 
-| Containerpfad | Inhalt |
+Bei aktivierter Original-Bot-Preisreduktionsoption kann dieser den Veröffentlichungspreis ändern.
+Ohne diese separat konfigurierte Option werden die gespeicherten Preisdaten verwendet.
+
+Reservierte, fehlende, lokal deaktivierte oder doppelt gespeicherte Anzeigen-IDs werden nicht
+automatisch neu veröffentlicht. Fehlende Bilder verhindern den Start einer Veröffentlichung.
+Automatik braucht einen aktuellen Online-Stand. Den regelmäßigen Online-Abgleich deshalb anlassen.
+
+## 6. Unklare Veröffentlichung / Neustart
+
+Vor einer Veröffentlichung wird ein dauerhaftes Journal gespeichert. Erst eine erfolgreich
+beendete Aktion mit neuer gespeicherter Anzeigen-ID hebt die Sperre auf. Bei Fehler, Zeitlimit,
+Stoppen oder Neustart während unbestätigter Veröffentlichung wird nicht automatisch erneut publiziert.
+
+Im eigenen Kleinanzeigen-Konto prüfen, ob eine neue Anzeige erstellt wurde. Anschließend
+synchronisieren und nötigenfalls doppelte Anzeigen bzw. lokale Duplikate bereinigen. Erst danach
+im Anzeigeneditor **Sperre nach Prüfung aufheben** bestätigen. Dieser Schritt startet bewusst ein
+neues volles Intervall ab jetzt. Eine einzelne zurückgegebene Exit-0-Meldung ohne neue ID gilt
+nicht als bestätigte Wiederveröffentlichung.
+
+## 7. Pfade und Backups
+
+| Pfad | Inhalt |
 | --- | --- |
 | `/data/workspace/config.yaml` | Original-Bot-Konfiguration |
-| `/data/workspace/.credentials.json` | GUI-Zugangsdaten, Rechte 0600 |
-| `/data/workspace/browser-profile/` | Persistente Chromium-Sitzung |
-| `/data/workspace/ads/` | Eigene Anzeigen und hochgeladene Bilder |
-| `/data/workspace/downloaded-ads/` | Heruntergeladene Anzeigen und Bilder |
-| `/data/state/history.json` | Letzte 50 Aufträge |
-| `/data/state/*.log` | Gekürzte, gefilterte Auftragsprotokolle |
-| `/data/state/backups/` | Letzte zehn editorseitige Sicherungen je Datei |
+| `/data/workspace/.credentials.json` | Zugangsdaten, privat gespeichert, nicht verschlüsselt |
+| `/data/workspace/browser-profile/` | Standard-Browsersitzung einer neuen Installation |
+| `/data/workspace/ads/` | Eigene lokale Arbeitsdateien |
+| `/data/workspace/downloaded-ads/` | Importierte Arbeitsdateien und Bilder |
+| `/data/state/engine.json` | Zeitpläne, Sicherheitsjournale, Online-Snapshot, Verlauf |
+| `/data/state/backups/` | Letzte zehn Textversionen bearbeiteter Dateien |
+| `/data/state/archives/` | Letzte drei Bild-/Datensicherungen je bearbeiteter Online-Anzeige |
 
-Home-Assistant-Sicherungen müssen das Add-on einschließen, um diese Daten
-mitzusichern. Nutzdaten werden nicht in `/config/` oder in das Quellcodepaket
-kopiert. Der Editor erlaubt keine Zugriffe auf andere Verzeichnisse.
+In einem Archiv liegt `original.yaml` als Originaltext sowie `restore.yaml` mit relativ zu
+mitgesicherten Bildern auflösbaren Pfaden. Für eine Wiederherstellung Daten sichern und Add-on
+stoppen; den Archivinhalt in einen Arbeitsordner unter `ads/` übernehmen. Eine bereits veraltete
+Online-ID nicht ohne Abgleich erneut verwenden. Textbackups behalten die Originalendung im
+Separatverweis `path.txt`; auch JSON-Quellen bleiben im Archiv inhaltlich erkennbar.
 
-Live-Ausgaben sind auf etwa 128 KiB begrenzt, gespeicherte Auftragsausgaben
-auf etwa 1 MiB. Zugangsdaten werden nach Möglichkeit aus diesen Ausgaben
-gefiltert. Der separate CLI-Logfile wird nach dem Auftrag entfernt. Anzeigen,
-Bilder, Browserprofile und Bot-Diagnosedateien können trotzdem private Daten
-enthalten; die Zugangsdaten sind dateirechtlich geschützt, nicht verschlüsselt.
+## 8. Original-Bot-Build
 
-## Netzwerk und Browser
-
-Nur Nginx lauscht für Ingress auf Port 8099; es akzeptiert ausschließlich
-Verbindungen des Supervisors von `172.30.32.2`. Kein Host-Port wird geöffnet.
-Backend, VNC und WebSocket-Brücke binden nur an Loopback. Der gesamte
-Browserzugang nutzt den angemeldeten Home-Assistant-Ingress-Zugang.
-
-Chromium läuft als UID 1000. `--no-sandbox` ist wegen des eingeschränkten
-Add-on-Containers in der Erstkonfiguration gesetzt; der Container benötigt
-keinen deaktivierten Schutzmodus. `--disable-dev-shm-usage` verwendet
-Container-Temporärspeicher, statt einen großen gemeinsamen Host-Speicher
-vorauszusetzen. GPU-Passthrough ist nicht eingerichtet.
-
-## Fehlerbehebung und Grenzen
-
-- **Add-on fehlt im Store:** `/addons/kleinanzeigen_bot/config.yaml` und
-  `/addons/kleinanzeigen_bot/Dockerfile` müssen direkt an diesen Pfaden liegen.
-  Quellen neu laden. Ein zusätzlicher ZIP-Oberordner verhindert die Erkennung.
-- **Build scheitert:** Supervisor-Build-Protokoll prüfen. Paketdownloads und
-  GitHub-Release-Downloads benötigen Internet; eine vorhandene 32-Bit-Installation
-  wird nicht unterstützt. Die Bot-Datei wird im Build mit `version` und `help`
-  geprüft, sodass ein fehlender oder nicht lauffähiger Download den Build stoppt.
-- **Browser leer:** Desktop zeigt den Bot-Browser erst während browserbasierter
-  Aufträge. Einen Login-Auftrag starten und gegebenenfalls Desktop neu laden.
-- **Anmeldung wird nicht gespeichert:** `browser.use_private_window: false`
-  und `browser.user_data_dir: /data/workspace/browser-profile` beibehalten;
-  keine private/guest/headless-Browseroption verwenden.
-- **Formularprüfung schlägt fehl:** Live-Ausgabe lesen, Datei korrigieren und
-  `verify` erneut ausführen. CAPTCHA wird manuell gelöst.
-- **Zeitlimit:** Für manuelle Verifizierung mehr Zeit in den Add-on-Optionen
-  setzen und das Add-on neu starten.
-
-Die Integration wurde hier mit einem simulierten CLI-Prozess auf API-Ebene
-geprüft. Das tatsächliche Containerimage, Supervisor-Ingress, VNC-WebSocket,
-Chromium-Start und Kleinanzeigen-Abläufe wurden nicht end-to-end getestet.
-Die Hardware-/Laufzeitkompatibilität muss daher auf dem Zielgerät bestätigt
-werden. Änderungen am Upstream-Bot oder an der Website können Anpassungen
-nötig machen.
-
-## Upstream-Version und Entwicklung
-
-Der Docker-Build lädt standardmäßig den GitHub-Release-Kanal `latest` herunter.
-Es gibt keine automatische Bot-Aktualisierung beim Start. Für reproduzierbare
-Builds einen konkreten verfügbaren Release-Tag mit dem Docker-Build-Argument
-`BOT_RELEASE` festlegen und das Image neu bauen. Die Architekturabbildung folgt
-den Upstream-Binärnamen `amd64` und `aarch64`.
-
-Das Paket enthält `tests/test_api.py` sowie eine offline ausführbare
-Validierung. Tests benötigen Python 3.12+ mit Flask und PyYAML:
+Das Dockerfile installiert den Original-Bot aus Git-Quellcode und führt dessen
+`fix_nodriver.py` aus. `BOT_REF` ist standardmäßig `main`. Für nachvollziehbare Builds eine volle
+Commit-SHA übergeben. `/opt-bot-commit.txt`, `/opt-bot-version.txt` und
+`/opt-bot-dependencies.txt` dokumentieren das tatsächlich gebaute Image.
 
 ```bash
-python3 tests/test_api.py
-python3 tests/validate_project.py
+docker build --build-arg BUILD_ARCH=amd64 --build-arg BOT_REF=main   -t ha-kleinanzeigen-bot:0.2.0 kleinanzeigen_bot/
 ```
 
-Ein optionaler Docker-Build auf einem Rechner mit Docker:
+`main` und nicht exakt fixierte Python-/Debian-Abhängigkeiten können sich ändern. Die UI liest
+die englische `list`-Blockausgabe des ausgewählten Bots. Ein verändertes oder unvollständiges
+Format führt zu einem sichtbaren Fehler statt einer vermeintlich leeren Anzeigenliste.
+
+Bei Anzeigen mit einer Paketauswahl kann die Original-Bot-Standardeinstellung `MANUAL`
+eine Bestätigung im Browser erfordern. Für automatische Auswahl des vom Bot verifizierten
+kostenlosen Basispakets die Original-Option `publishing.package_selection: BASIS` ausdrücklich
+in der Konfiguration setzen. Gerätebestätigung und CAPTCHA können weiterhin eine manuelle
+Browseraktion erfordern; das wird nicht durch die lokale Automatik beseitigt.
+
+Der Build prüft, ob `list` und `extend` in der Bot-Hilfe vorhanden sind. Diese Build-Prüfung
+ersetzt keinen echten Login-/Anzeigentest.
+
+## 9. Tests wiederholen
 
 ```bash
-docker build --build-arg BUILD_ARCH=amd64 --build-arg BUILD_VERSION=0.1.0   -t kleinanzeigen-ha-addon:0.1.0 ./kleinanzeigen_bot
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-test.txt playwright
+python -m playwright install --with-deps chromium
+python tests/run_ten.py
 ```
 
-Dieser Build allein ist kein Nachweis einer erfolgreichen HA-Installation.
-
-## Projekt- und Lizenzhinweis
-
-Eigenständiger neuer Wrapper für das Second-Hand-Friends-Projekt,
-AGPL-3.0-or-later. Siehe `LICENSE-NOTICE.md` im Paket. Das ursprüngliche Projekt
-weist darauf hin, dass die Bot-Nutzung gegen die Kleinanzeigen-Nutzungsbedingungen
-verstoßen kann. Es ist kein offizielles Home-Assistant- oder Upstream-Add-on.
+Ohne installiertes Playwright/Chromium werden Browsertests explizit übersprungen.
+Die hier dokumentierten Chromium-Tests wurden tatsächlich ausgeführt, nicht übersprungen.
+Alle Tests sprechen nur die lokale Offline-CLI an. Docker und echter Home-Assistant-Ingress
+müssen auf einem geeigneten Zielsystem geprüft werden.

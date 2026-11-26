@@ -1,237 +1,327 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Offline API and PTY tests. No calls to Kleinanzeigen or GitHub."""
-import importlib.util
 from io import BytesIO
 import json
-import os
 from pathlib import Path
-import sys
-import tempfile
 import time
-import unittest
-from unittest.mock import patch
+import pytest
+import re
+from PIL import Image
+from bs4 import BeautifulSoup
 
-ROOT = Path(__file__).resolve().parents[1]
-FAKE_SOURCE = """#!/usr/bin/env python3
-import os, sys, time
-command = sys.argv[1]
-print('FAKE ' + command, flush=True)
-secret = os.environ.get('KLEINANZEIGEN_BOT_PASSWORD', '')
-if command == 'status':
-    mid = len(secret) // 2
-    sys.stdout.write('Private: ' + secret[:mid]); sys.stdout.flush()
-    time.sleep(.1)
-    print(secret[mid:] + '\\n' + 'x' * 100, flush=True)
-else:
-    print('Private: ' + secret, flush=True)
-if command == 'login':
-    print('ENTER please', flush=True)
-    input()
-if command == 'diagnose':
-    time.sleep(60)
-if command == 'list':
-    sys.exit(1)
-print('DONE', flush=True)
-"""
 
-class ApiTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory(prefix='ha-kleinanzeigen-test-')
-        cls.directory = Path(cls.tmp.name)
-        fake = cls.directory / 'fake_bot.py'
-        fake.write_text(FAKE_SOURCE)
-        fake.chmod(0o755)
-        cls.env = patch.dict(os.environ, {
-            'BOT_WORKSPACE': str(cls.directory / 'workspace'),
-            'BOT_STATE': str(cls.directory / 'state'),
-            'BOT_BINARY': str(fake),
-            'JOB_TIMEOUT_MINUTES': '1',
-        })
-        cls.env.start()
-        spec = importlib.util.spec_from_file_location('ha_addon_api_test', ROOT / 'kleinanzeigen_bot/app/server.py')
-        cls.server = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = cls.server
-        spec.loader.exec_module(cls.server)
-        cls.client = cls.server.app.test_client()
-        cls.headers = {'X-CSRF-Token': cls.server.CSRF}
+def test_homepage_and_ingress(api):
+    r=api.client.get('/',headers={'X-Ingress-Path':'/api/hassio_ingress/test-token'})
+    assert r.status_code==200
+    assert b'{{ csrf' not in r.data
+    assert b'/api/hassio_ingress/test-token/' in r.data
+    soup=BeautifulSoup(r.data,'html.parser')
+    assert soup.select_one('#ads:not([hidden])')
+    assert soup.select_one('dialog#editor')
+    assert not soup.select('script[src],link[rel="stylesheet"]')
 
-    @classmethod
-    def tearDownClass(cls):
-        if cls.server.current and cls.server.current['state'] == 'running':
-            cls.server.current['stop_requested'] = True
-            for _ in range(300):
-                if cls.server.current['state'] != 'running':
-                    break
-                time.sleep(.03)
-        cls.env.stop()
-        cls.tmp.cleanup()
+@pytest.mark.parametrize('path',['/api/jobs','/api/settings','/api/policy','/api/file','/api/credentials','/api/config'])
+def test_csrf(api,path):
+    assert api.client.post(path,json={}).status_code in {403,405}
+    method='POST' if path=='/api/jobs' else 'PUT'
+    assert api.client.open(path,method=method,json={}).status_code==403
 
-    def setUp(self):
-        if self.server.current and self.server.current['state'] == 'running':
-            self.wait_done()
-        self.server.atomic_write(self.server.WORK / 'config.yaml', self.server.DEFAULT_CONFIG)
-        self.server.atomic_write(self.server.WORK / '.credentials.json', json.dumps({
-            'username': 'offline@example.invalid', 'password': 'offline-secret-123456789'}))
+@pytest.mark.parametrize('value',[[],1,'text',None])
+def test_json_object(api,value):
+    assert api.client.post('/api/jobs',json=value,headers=api.headers).status_code in {400,415}
 
-    def send(self, path, data, method='POST'):
-        return self.client.open(path, method=method, json=data, headers=self.headers)
+@pytest.mark.parametrize('name',['/etc/passwd','ads/../../config.yaml','ads/.secret.yaml','ads/ad_bad.txt','config.yaml','ads\\x.yaml'])
+def test_path_traversal(api,name):
+    assert api.client.get('/api/file',query_string={'path':name}).status_code==400
 
-    def start(self, command, selector='', **kwargs):
-        response = self.send('/api/jobs', dict(command=command, selector=selector, **kwargs))
-        self.assertEqual(response.status_code, 202, response.get_data(as_text=True))
-        return response.json['job']['id']
+def test_symlink_blocked(api):
+    p=api.store.work/'ads/link.yaml';p.symlink_to(api.store.work/'config.yaml')
+    assert api.client.get('/api/file?path=ads/link.yaml').status_code==400
 
-    def wait_done(self):
-        for _ in range(300):
-            job = self.client.get('/api/status').json['current']
-            if job['state'] != 'running':
-                return job
-            time.sleep(.03)
-        self.fail('Fake bot did not terminate')
+def test_credentials_not_returned(api):
+    r=api.client.get('/api/credentials')
+    assert r.json['password_set']
+    assert 'password' not in r.json
+    assert (api.store.work/'.credentials.json').stat().st_mode&0o777==0o600
 
-    def wait_pty(self):
-        for _ in range(100):
-            if self.server.current['pty'] is not None:
-                return
-            time.sleep(.02)
-        self.fail('PTY not ready')
+def test_password_preserved(api):
+    assert api.send('/api/credentials',{'username':'offline@example.invalid','password':''},'PUT').status_code==200
+    assert api.engine.secrets()[0]['password']=='offline-secret-123456789'
 
-    def test_homepage(self):
-        r = self.client.get('/')
-        self.assertEqual(r.status_code, 200)
-        self.assertIn(b'Browserdesktop', r.data)
-        self.assertNotIn(b'{{ csrf', r.data)
+def test_account_change_rejected(api):
+    assert api.send('/api/credentials',{'username':'other@example.invalid','password':'new'},'PUT').status_code==400
 
-    def test_csrf(self):
-        r = self.client.post('/api/jobs', json={'command': 'verify'})
-        self.assertEqual(r.status_code, 403)
+def test_crud_revision_and_backup(api):
+    name='ads/new.yaml'
+    r=api.send('/api/file',{'path':name,'content':'title: New\ndescription: Hi\ncategory: 161/278\nactive: false\n'},'PUT')
+    assert r.status_code==200,r.json
+    original=api.client.get('/api/file?path='+name).json
+    assert api.send('/api/file',{'path':name,'content':'title: Changed\n'},'PUT').status_code==409
+    r=api.send('/api/file',{'path':name,'content':'title: Changed\n','revision':original['revision']},'PUT')
+    assert r.status_code==200
+    assert list((api.store.state/'backups').rglob('*.bak'))
+    assert api.send('/api/file',{'path':name,'confirm':True,'revision':r.json['revision']},'DELETE').status_code==200
+    assert api.client.get('/api/file?path='+name).status_code==404
 
-    def test_json_object_required(self):
-        self.assertEqual(self.send('/api/jobs', ['verify']).status_code, 400)
+@pytest.mark.parametrize('content',['[]','title: [','description: missing title'])
+def test_invalid_yaml(api,content):
+    assert api.send('/api/file',{'path':'ads/bad.yaml','content':content},'PUT').status_code==400
 
-    def test_credentials_private(self):
-        r = self.client.get('/api/credentials')
-        self.assertEqual(r.status_code, 200)
-        self.assertNotIn('password', r.json)
-        self.assertTrue(r.json['password_set'])
-        self.assertEqual((self.server.WORK / '.credentials.json').stat().st_mode & 0o777, 0o600)
+def test_json_extension_requires_json(api):
+    assert api.send('/api/file',{'path':'ads/bad.json','content':'title: Bad'},'PUT').status_code==400
 
-    def test_password_preserved(self):
-        self.assertEqual(self.send('/api/credentials', {'username':'new@example.invalid', 'password':''}, 'PUT').status_code, 200)
-        self.assertEqual(self.server.credentials()['password'], 'offline-secret-123456789')
+def test_managed_fields_protected(api):
+    name=api.sync()[0]['path'];obj=api.client.get('/api/file?path='+name).json
+    obj['data']['id']=222
+    assert api.send('/api/file',{'path':name,'data':obj['data'],'revision':obj['revision']},'PUT').status_code==400
 
-    def test_ad_crud(self):
-        data={'path':'ads/ad_crud.yaml', 'content':'active: false\ntitle: Offline test\nprice: 10\n'}
-        self.assertEqual(self.send('/api/file', data, 'PUT').status_code, 200)
-        self.assertEqual(self.client.get('/api/file?path=ads/ad_crud.yaml').json['content'], data['content'])
-        self.assertEqual(self.send('/api/file', {'path':data['path']}, 'DELETE').status_code, 400)
-        self.assertEqual(self.send('/api/file', {'path':data['path'], 'confirm':True}, 'DELETE').status_code, 200)
-        self.assertEqual(self.client.get('/api/file?path=ads/ad_crud.yaml').status_code, 404)
-        self.assertTrue(list((self.server.STATE / 'backups').glob('*.bak')))
+@pytest.mark.parametrize('cmd',['publish','update','extend','reserve','activate','delete'])
+def test_external_write_confirmation(api,cmd):
+    assert api.send('/api/jobs',{'command':cmd,'path':'ads/test.yaml'}).status_code==400
 
-    def test_file_listing(self):
-        self.assertEqual(self.send('/api/file', {'path':'ads/ad_listing.yaml','content':'title: List test\n'}, 'PUT').status_code, 200)
-        self.assertIn('ads/ad_listing.yaml',[f['path'] for f in self.client.get('/api/files').json['files']])
+@pytest.mark.parametrize('data',[{'command':'sh'},{'command':'sync; rm -rf /'},{'command':'auto_republish'},{'command':'auto_extend'}])
+def test_command_injection(api,data):
+    assert api.send('/api/jobs',data).status_code==400
 
-    def test_path_traversal(self):
-        for path in ['ads/../../options.json','/etc/passwd','ads/.credentials.json','ads/ad_bad.txt','config.yaml']:
-            self.assertEqual(self.client.get('/api/file',query_string={'path':path}).status_code,400,path)
+def test_sync_imports_data_and_images(api):
+    rows=api.sync()
+    assert len(rows)==1 and rows[0]['ad_id']=='101' and rows[0]['online']
+    assert rows[0]['thumbnail'].endswith('.png')
+    d=api.client.get('/api/file?path='+rows[0]['path']).json
+    assert d['data']['special_attributes']=={'condition_s':'like_new'}
+    assert d['data']['contact']['zipcode']=='01234'
+    r=api.client.get('/api/image',query_string={'path':rows[0]['thumbnail']})
+    assert r.status_code==200
+    r.close()
 
-    def test_symlink(self):
-        link = self.server.WORK / 'ads/ad_link.yaml'
-        link.symlink_to(self.server.WORK / 'config.yaml')
-        try:
-            self.assertEqual(self.client.get('/api/file?path=ads/ad_link.yaml').status_code, 400)
-        finally:
-            link.unlink()
+def test_sync_all_not_first_page(api):
+    api.modify(online=[dict(id=i,title='Listing '+str(i),state='active',expires='-') for i in range(100,137)])
+    rows=api.sync()
+    assert len(rows)==37
+    assert len([c for c in api.calls() if c['command']=='download'])==2
 
-    def test_yaml_invalid(self):
-        self.assertEqual(self.send('/api/config',{'content':'login: ['},'PUT').status_code,400)
-        self.assertEqual(self.send('/api/config',{'content':'[]'},'PUT').status_code,400)
-        self.assertEqual(self.send('/api/config',{'content':'browser: {}'},'PUT').status_code,400)
+@pytest.mark.parametrize('failure',['fail_list','malformed_list'])
+def test_failed_snapshot_keeps_previous(api,failure):
+    api.sync();old=api.engine.db['synced_at']
+    api.modify(**{failure:True})
+    j=api.start('sync')
+    assert j['state']=='failed'
+    assert api.engine.db['synced_at']==old
+    assert api.client.get('/api/ads').json['ads'][0]['online']
+    assert api.engine.db['sync_error']
 
-    def test_json_file_invalid(self):
-        self.assertEqual(self.send('/api/file',{'path':'ads/ad_invalid.json','content':'title: not JSON'},'PUT').status_code,400)
+def test_empty_account_is_not_stale(api):
+    api.sync();api.modify(online=[])
+    assert api.start('sync')['state']=='success'
+    assert api.engine.db['online']==[]
+    assert api.client.get('/api/ads').json['ads'][0]['state']=='not-in-snapshot'
 
-    def test_confirmation_required(self):
-        for command in self.server.MUTATING:
-            self.assertEqual(self.send('/api/jobs',{'command':command,'selector':'all'}).status_code,400)
+def test_failed_download_visible_even_exit_zero(api):
+    api.modify(fail_download='101')
+    j=api.start('sync')
+    assert j['state']=='failed'
+    rows=api.client.get('/api/ads').json['ads']
+    assert rows[0]['path'] is None
+    assert api.engine.db['sync_error']
 
-    def test_command_injection(self):
-        for data in [{'command':'sh','selector':''}, {'command':'publish','selector':'all; echo unsafe','confirm':True}, {'command':'verify','selector':'all'}]:
-            self.assertEqual(self.send('/api/jobs',data).status_code,400)
+def test_resync_preserves_local_changes(api):
+    name=api.sync()[0]['path'];d=api.client.get('/api/file?path='+name).json
+    d['data']['title']='Edited locally'
+    assert api.send('/api/file',{'path':name,'data':d['data'],'revision':d['revision']},'PUT').status_code==200
+    api.sync()
+    assert api.store.read(name)[0]['title']=='Edited locally'
+    assert len([c for c in api.calls() if c['command']=='download'])==1
 
-    def test_publish_arguments(self):
-        with self.server.app.test_request_context('/'):
-            cmd, sel, args=self.server.validate_job({'command':'publish','selector':'changed,due','confirm':True,'keep_old':True})
-        self.assertEqual(sel,'changed,due')
-        self.assertIn('--keep-old',args)
-        self.assertIn('--workspace-mode=portable',args)
+def test_form_keeps_unknown_fields(api):
+    name=api.sync()[0]['path'];d=api.client.get('/api/file?path='+name).json
+    d['data']['title']='New title'
+    assert api.send('/api/file',{'path':name,'data':d['data'],'revision':d['revision']},'PUT').status_code==200
+    assert api.store.read(name)[0]['special_attributes']['condition_s']=='like_new'
+    assert api.store.read(name)[0]['contact']['zipcode']=='01234'
 
-    def test_job_success_and_log(self):
-        job_id=self.start('verify')
-        job=self.wait_done()
-        self.assertEqual(job['state'],'success')
-        self.assertEqual(job['returncode'],0)
-        self.assertIn('[VERBORGEN]',job['output'])
-        self.assertNotIn('offline-secret-123456789',job['output'])
-        r=self.client.get('/api/log/'+job_id)
-        self.assertEqual(r.status_code,200)
-        self.assertNotIn(b'offline-secret-123456789',r.data)
-        r.close()
+def test_upload_relative_to_nested_ad_and_webp_conversion(api):
+    name=api.sync()[0]['path']
+    b=BytesIO();Image.new('RGB',(10,10),'green').save(b,format='WEBP');b.seek(0)
+    r=api.client.post('/api/images',headers=api.headers,data={'path':name,'files':(b,'test.webp')},content_type='multipart/form-data')
+    assert r.status_code==200,r.json
+    assert r.json['paths'][0].startswith('images/') and r.json['paths'][0].endswith('.jpg')
+    image=api.store.path(name).parent/r.json['paths'][0]
+    with Image.open(image) as im:
+        assert im.format=='JPEG'
 
-    def test_job_failure(self):
-        self.start('list')
-        self.assertEqual(self.wait_done()['state'],'failed')
+@pytest.mark.parametrize('raw',[b'not an image',b'\x89PNG\r\n\x1a\nTEST'])
+def test_invalid_upload_rejected(api,raw):
+    name=api.sync()[0]['path']
+    r=api.client.post('/api/images',headers=api.headers,data={'path':name,'files':(BytesIO(raw),'fake.png')},content_type='multipart/form-data')
+    assert r.status_code==400
 
-    def test_login_pty_lock_and_enter(self):
-        self.start('login')
-        self.wait_pty()
-        self.assertEqual(self.send('/api/jobs',{'command':'verify'}).status_code,409)
-        self.assertEqual(self.send('/api/config',{'content':self.server.DEFAULT_CONFIG},'PUT').status_code,409)
-        self.assertEqual(self.send('/api/credentials',{'username':'x','password':'y'},'PUT').status_code,409)
-        self.assertEqual(self.send('/api/jobs/enter',{}).status_code,200)
-        self.assertEqual(self.wait_done()['state'],'success')
+def test_missing_images_block_publish(api):
+    name=api.sync()[0]['path']
+    obj,_=api.store.read(name)
+    api.store.image_files(name,obj)[0].unlink()
+    j=api.start('publish',name)
+    assert j['state']=='failed'
+    assert not any(c['command']=='publish' for c in api.calls())
 
-    def test_stop(self):
-        self.start('diagnose')
-        self.wait_pty()
-        self.assertEqual(self.send('/api/jobs/stop',{}).status_code,200)
-        self.assertEqual(self.wait_done()['state'],'stopped')
+def test_update_uses_single_scoped_ad(api):
+    name=api.sync()[0]['path'];d=api.client.get('/api/file?path='+name).json
+    d['data']['title']='Updated online'
+    api.send('/api/file',{'path':name,'data':d['data'],'revision':d['revision']},'PUT')
+    j=api.start('update',name)
+    assert j['state']=='success',j
+    calls=[c for c in api.calls() if c['command']=='update']
+    assert calls[0]['args']['--ads']=='101'
+    assert Path(calls[0]['args']['--config']).parent==api.store.work
+    assert not list(api.store.work.glob('.job-config-*'))
+    assert api.engine.db['online'][0]['title']=='Updated online'
 
-    def test_timeout(self):
-        old=self.server.TIMEOUT
-        self.server.TIMEOUT=.15
-        try:
-            self.start('diagnose')
-            self.assertEqual(self.wait_done()['state'],'timeout')
-        finally:
-            self.server.TIMEOUT=old
+def test_republish_new_id_same_data_images_and_archive(api):
+    name=api.sync()[0]['path'];before=api.store.read(name)[0]
+    j=api.start('publish',name)
+    assert j['state']=='success',j
+    after=api.store.read(name)[0]
+    assert after['id']!=before['id']
+    for key in ['title','description','category','price','images','contact','special_attributes']:
+        assert after[key]==before[key]
+    assert len(api.engine.db['online'])==1
+    assert not any(a['ad_id']=='101' for a in api.engine.db['online'])
+    assert list((api.store.state/'archives').rglob('restore.yaml'))
+    assert list((api.store.state/'archives').rglob('image_000.png'))
 
-    def test_split_secret_redacted(self):
-        self.start('status')
-        j=self.wait_done()
-        self.assertNotIn('offline-secret-123456789',j['output'])
-        self.assertIn('[VERBORGEN]',j['output'])
+def test_reserved_not_republished(api):
+    name=api.sync()[0]['path'];assert api.start('reserve',name)['state']=='success'
+    assert api.start('publish',name)['state']=='failed'
+    assert api.engine.db['online'][0]['state']=='reserved'
+    assert api.start('activate',name)['state']=='success'
 
-    def test_png_upload(self):
-        r=self.client.post('/api/images',headers=self.headers,
-                           data={'files':(BytesIO(b'\x89PNG\r\n\x1a\nTEST'),'test.png')},content_type='multipart/form-data')
-        self.assertEqual(r.status_code,200)
-        self.assertTrue((self.server.WORK / 'ads' / r.json['paths'][0]).is_file())
+def test_duplicate_id_blocks_action(api):
+    name=api.sync()[0]['path'];obj,text=api.store.read(name)
+    from storage import atomic_write
+    atomic_write(api.store.work/'ads/duplicate.yaml',text)
+    assert api.start('update',name)['state']=='failed'
+    assert not any(c['command']=='update' for c in api.calls())
 
-    def test_upload_invalid(self):
-        r=self.client.post('/api/images',headers=self.headers,
-                           data={'files':(BytesIO(b'<script>'),'test.png')},content_type='multipart/form-data')
-        self.assertEqual(r.status_code,400)
+def test_split_secrets_redacted_and_history_persisted(api):
+    j=api.start('status')
+    assert j['state']=='success'
+    assert '[VERBORGEN]' in j['output']
+    assert 'offline-secret-123456789' not in j['output']
+    r=api.client.get('/api/log/'+j['id']);assert b'offline-secret' not in r.data;r.close()
+    db=json.loads(api.engine.db_path.read_text())
+    assert db['history'][-1]['state']=='success'
 
-    def test_finished_job_persisted(self):
-        self.start('verify');j=self.wait_done()
-        h=json.loads((self.server.STATE / 'history.json').read_text())
-        self.assertEqual(h[-1]['id'],j['id'])
-        self.assertEqual(h[-1]['state'],'success')
-        self.assertEqual(sum(item['id']==j['id'] for item in h),1)
+def test_pty_login_locks_edits_and_enter(api):
+    assert api.send('/api/jobs',{'command':'login'}).status_code==202
+    for _ in range(200):
+        if api.engine.current['pty'] is not None:
+            break
+        time.sleep(.01)
+    assert api.send('/api/jobs',{'command':'verify'}).status_code==409
+    assert api.send('/api/file',{'path':'ads/new.yaml','content':'title: New'},'PUT').status_code==409
+    assert api.send('/api/jobs/enter',{}).status_code==200
+    assert api.wait_done()['state']=='success'
 
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
+def test_stop_process_group(api):
+    api.send('/api/jobs',{'command':'diagnose'})
+    for _ in range(200):
+        if (api.store.work/'.child-pid').exists():
+            break
+        time.sleep(.01)
+    assert api.send('/api/jobs/stop',{}).status_code==200
+    assert api.wait_done()['state']=='stopped'
+    pid=int((api.store.work/'.child-pid').read_text())
+    status=Path('/proc')/str(pid)/'status'
+    if status.exists():
+        assert re.search(r'^State:\s+Z',status.read_text(),re.M)
+
+def test_timeout(api):
+    api.engine.timeout=.15
+    assert api.start('diagnose')['state']=='timeout'
+
+def test_initial_sync_if_idle_no_duplicate(api):
+    r=api.send('/api/jobs',{'command':'sync','if_idle':True});assert r.status_code==202
+    r=api.send('/api/jobs',{'command':'sync','if_idle':True});assert r.status_code==202
+    api.wait_done()
+    assert len([c for c in api.calls() if c['command']=='list'])==1
+    assert api.send('/api/jobs',{'command':'sync','if_idle':True}).json['skipped']
+
+
+def test_online_refresh_preserves_path_policy_images_and_counters(api):
+    name=api.sync()[0]['path']
+    api.engine.set_policy(name,True,17,True)
+    original_policy=dict(api.engine.db['policies'][name])
+    obj,text=api.store.read(name)
+    obj['title']='Local unsynced title';obj['republication_interval']=17;obj['repost_count']=8
+    from storage import atomic_write
+    import yaml
+    atomic_write(api.store.path(name),yaml.safe_dump(obj))
+    api.modify(online=[dict(id=101,title='Updated externally',state='active',expires='-')])
+    done=api.start('refresh',name)
+    assert done['state']=='success',done
+    new,_=api.store.read(name)
+    assert new['title']=='Updated externally'
+    assert new['republication_interval']==17 and new['repost_count']==8
+    assert api.engine.db['policies'][name]==original_policy
+    assert new['images'][0].startswith('images/online-')
+    assert api.store.image_files(name,new,strict=True)
+    assert not list(api.store.work.glob('refresh-*'))
+    assert len([f for f in api.store.files() if f.get('ad_id')=='101'])==1
+
+
+def test_failed_online_refresh_leaves_original_untouched(api):
+    name=api.sync()[0]['path'];before=api.store.path(name).read_bytes()
+    api.modify(fail_download='101')
+    assert api.start('refresh',name)['state']=='failed'
+    assert api.store.path(name).read_bytes()==before
+    assert not list(api.store.work.glob('refresh-*'))
+
+
+def test_supervisor_token_not_in_child_environment(api):
+    api.start('version')
+    assert api.calls()[0]['supervisor_present'] is False
+
+
+def test_external_image_and_image_symlinks_rejected(api):
+    name=api.sync()[0]['path']
+    image=api.store.work/'ads/leak.jpg'
+    image.symlink_to('/etc/passwd')
+    assert api.client.get('/api/image?path=ads/leak.jpg').status_code==400
+    obj,_=api.store.read(name);obj['images']=['/etc/passwd']
+    from storage import Invalid
+    with pytest.raises(Invalid):
+        api.store.image_files(name,obj,strict=True)
+
+
+def test_invalid_oversized_request(api):
+    r=api.client.post('/api/jobs',headers={**api.headers,'Content-Type':'application/json'},data=b' '*(20*1024*1024+1))
+    assert r.status_code==413
+
+
+def test_native_yaml_timestamps_survive_form_edit(api):
+    name=api.sync()[0]['path'];obj,_=api.store.read(name)
+    from datetime import datetime
+    import yaml
+    from storage import atomic_write
+    obj['updated_on']=datetime(2026,1,1,12,0,0)
+    atomic_write(api.store.path(name),yaml.safe_dump(obj))
+    d=api.client.get('/api/file?path='+name).json
+    assert d['data']['updated_on']=='2026-01-01T12:00:00'
+    d['data']['title']='Edited with YAML timestamp'
+    r=api.send('/api/file',{'path':name,'data':d['data'],'revision':d['revision']},'PUT')
+    assert r.status_code==200,r.json
+
+
+@pytest.mark.parametrize('path',['./ads/x.yaml','ads//x.yaml','ads/./x.yaml'])
+def test_path_aliases_cannot_create_duplicate_policies(api,path):
+    assert api.client.get('/api/file',query_string={'path':path}).status_code==400
+
+
+def test_crlf_config_revision_can_be_saved(api):
+    p=api.store.work/'config.yaml'
+    p.write_bytes(p.read_bytes().replace(b'\n',b'\r\n'))
+    d=api.client.get('/api/config').json
+    r=api.send('/api/config',d,'PUT')
+    assert r.status_code==200,r.json
+
+@pytest.mark.parametrize('command',[[],{},42,None])
+def test_command_type_validated(api,command):
+    assert api.send('/api/jobs',{'command':command}).status_code==400

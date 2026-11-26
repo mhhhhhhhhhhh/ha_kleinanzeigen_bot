@@ -1,0 +1,28 @@
+..........................................................F............. [ 72%]
+...........................                                              [100%]
+=================================== FAILURES ===================================
+________ test_online_refresh_preserves_path_policy_images_and_counters _________
+
+api = <module 'server_test_2db94801a2cb4324a988d9b55b170681' from '/mnt/data/ha_kleinanzeigen_bot_fixed/kleinanzeigen_bot/app/server.py'>
+
+    def test_online_refresh_preserves_path_policy_images_and_counters(api):
+        name=api.sync()[0]['path']
+        api.engine.set_policy(name,True,17,True)
+        original_policy=dict(api.engine.db['policies'][name])
+        obj,text=api.store.read(name)
+        obj['title']='Local unsynced title';obj['republication_interval']=17;obj['repost_count']=8
+        from storage import atomic_write
+        import yaml
+        atomic_write(api.store.path(name),yaml.safe_dump(obj))
+        api.modify(online=[dict(id=101,title='Updated externally',state='active',expires='-')])
+        done=api.start('refresh',name)
+>       assert done['state']=='success',done
+E       AssertionError: {'automatic': False, 'command': 'refresh', 'ended': 1795704291.0759566, 'error': 'Online-Download hat nicht genau eine passende Anzeige geliefert.', ...}
+E       assert 'failed' == 'success'
+E         - success
+E         + failed
+
+tests/test_api.py:254: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_api.py::test_online_refresh_preserves_path_policy_images_and_counters - AssertionError: {'automatic': False, 'command': 'refresh', 'ended': 1795704...
+1 failed, 98 passed in 27.41s

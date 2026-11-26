@@ -1,17 +1,15 @@
-# Kleinanzeigen Bot mit Web-GUI
+# Kleinanzeigen Bot mit Web-GUI 0.2.0
 
-Lokales Home-Assistant-Add-on für den kleinanzeigen-bot von Second-Hand-Friends.
+Online-Anzeigen mit Bildern importieren, lokal bearbeiten und gezielt online aktualisieren.
+Automatische Verlängerung und Neuanlegen nach X Tagen lassen sich ausdrücklich freischalten.
 
-Enthalten: Anzeigeneditor für YAML/JSON, Bild-Upload, Konfigurationseditor,
-separate Zugangsdatenverwaltung, Auftragsverlauf und Live-Protokolle sowie
-ein Chromium-Desktop über noVNC für manuelle Anmeldung und Verifizierung.
+1. Konto speichern und über den Browserdesktop anmelden.
+2. ENTER senden und „Online synchronisieren“ starten.
+3. Unter „Automatik“ die Verlängerung aktivieren.
+4. Für Neuanlegen eine Anzeige öffnen und ihren Zeitplan speichern.
 
-Die Weboberfläche wird über Home Assistant Ingress geöffnet. Es sind keine
-zusätzlichen Host-Ports und kein Zugriff auf die Supervisor-API nötig.
-Bot und Desktop laufen als Benutzer mit UID 1000.
+Vollständige Anleitung: [DOCS.md](DOCS.md).
 
-**Status: experimentelle Version 0.1.0.** Web-API-Tests mit simuliertem Bot
-liegen bei; Docker-Build, Supervisor-Installation, noVNC-Verbindung und echte
-Kleinanzeigen-Abläufe müssen auf dem Zielsystem getestet werden.
-
-Installation und Bedienung: siehe `DOCS.md` bzw. den Dokumentation-Tab.
+Das Add-on ist experimentell: Die Offline-API und die Oberfläche in echtem Chromium wurden
+geprüft; Docker, Home Assistant Ingress und reale Kontoaktionen müssen auf dem Zielsystem
+noch bestätigt werden. Quellcode und tatsächlicher Prüfbericht liegen im vollständigen Paket.

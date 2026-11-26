@@ -1,0 +1,18 @@
+F.........................................................               [100%]
+=================================== FAILURES ===================================
+__________________________ test_homepage_and_ingress ___________________________
+
+api = <module 'server_test_1a97a673e05746aaa03e92526e9f3e8e' from '/mnt/data/ha_kleinanzeigen_bot_fixed/kleinanzeigen_bot/app/server.py'>
+
+    def test_homepage_and_ingress(api):
+        r=api.client.get('/',headers={'X-Ingress-Path':'/api/hassio_ingress/test-token'})
+>       assert r.status_code==200
+E       assert 500 == 200
+E        +  where 500 = <WrapperTestResponse streamed [500 INTERNAL SERVER ERROR]>.status_code
+
+tests/test_api.py:13: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    server_test_1a97a673e05746aaa03e92526e9f3e8e:server.py:93 API error: TemplateNotFound
+=========================== short test summary info ============================
+FAILED tests/test_api.py::test_homepage_and_ingress - assert 500 == 200
+1 failed, 57 passed in 6.35s

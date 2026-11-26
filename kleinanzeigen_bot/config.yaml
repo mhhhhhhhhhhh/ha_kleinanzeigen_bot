@@ -1,10 +1,10 @@
 name: Kleinanzeigen Bot mit Web-GUI
-version: "0.2.1"
+version: "0.2.0"
 slug: ha_kleinanzeigen_bot
-description: Kleinanzeigen-Bot mit Anzeigeneditor, Aufträgen und Browserdesktop
+description: Online-Anzeigen, Bilder, Bearbeitung und opt-in Automatik
 arch:
- - amd64
- - aarch64
+  - amd64
+  - aarch64
 startup: application
 boot: auto
 init: false
@@ -16,10 +16,10 @@ panel_title: Kleinanzeigen Bot
 panel_admin: true
 timeout: 30
 options:
- job_timeout_minutes: 30
- desktop_width: 1440
- desktop_height: 900
+  job_timeout_minutes: 30
+  desktop_width: 1440
+  desktop_height: 900
 schema:
- job_timeout_minutes: int(1,240)
- desktop_width: int(800,2560)
- desktop_height: int(600,1600)
+  job_timeout_minutes: int(1,240)
+  desktop_width: int(1280,2560)
+  desktop_height: int(800,1600)

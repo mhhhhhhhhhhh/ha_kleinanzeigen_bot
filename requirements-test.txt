@@ -1,0 +1,6 @@
+Flask>=3.1,<4
+PyYAML>=6,<7
+Pillow>=11,<13
+pytest>=8,<10
+beautifulsoup4>=4.12,<5
+wcmatch>=10,<11
