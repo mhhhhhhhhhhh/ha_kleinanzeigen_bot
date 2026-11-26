@@ -1,6 +1,6 @@
 FROM debian:trixie-slim
 ARG BUILD_ARCH
-ARG BUILD_VERSION=0.2.2
+ARG BUILD_VERSION=0.2.3
 # Set to a full commit SHA for reproducible upstream selection.
 ARG BOT_REF=main
 ENV DEBIAN_FRONTEND=noninteractive LANG=de_DE.UTF-8 TZ=Europe/Berlin \
